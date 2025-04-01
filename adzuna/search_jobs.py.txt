@@ -1,0 +1,56 @@
+import requests
+import argparse
+import csv
+from datetime import datetime
+
+# API credentials (use your actual credentials)
+API_ID = "53309e4f"  # Replace with your App ID
+API_KEY = "362bda54c64f4329c05d2918ea22adbd"  # Replace with your API Key
+
+# Base URL for Adzuna API
+BASE_URL = "https://api.adzuna.com/v1/api/jobs/us/search/1"
+
+# Set up argument parser for dynamic queries
+parser = argparse.ArgumentParser(description='Search for jobs using Adzuna API.')
+parser.add_argument('--title', type=str, required=True, help='Job title to search for.')
+parser.add_argument('--location', type=str, required=True, help='Location to search for jobs.')
+args = parser.parse_args()
+
+# Parameters for the search
+params = {
+    "app_id": API_ID,
+    "app_key": API_KEY,
+    "what": args.title,
+    "where": args.location,
+    "max_days_old": 1  # Jobs posted in the last 24 hours
+}
+
+# Make the API request
+response = requests.get(BASE_URL, params=params)
+
+# Check if the request was successful
+if response.status_code == 200:
+    # Parse the results
+    data = response.json()
+
+    # Print the number of jobs found
+    print(f"Found {len(data['results'])} jobs for '{args.title}' in '{args.location}'.")
+
+    # Write the results to CSV
+    with open('adzuna_results.csv', 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Title', 'Company', 'Location', 'Date Posted', 'URL'])
+
+        for job in data['results']:
+            writer.writerow([
+                job['title'],
+                job.get('company', {}).get('display_name', 'N/A'),
+                job['location']['display_name'],
+                job['created'],
+                job['redirect_url']
+            ])
+
+    print("Results saved to adzuna_results.csv.")
+
+else:
+    print(f"Error {response.status_code}: {response.text}")
